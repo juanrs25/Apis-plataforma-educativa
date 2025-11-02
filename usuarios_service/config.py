@@ -14,4 +14,5 @@ else:
 
 # --- Otras configuraciones ---
 SQLALCHEMY_TRACK_MODIFICATIONS = False
-SECRET_KEY = os.getenv('SECRET_KEY', 'dev-secret-key')  # Usa variable de entorno o valor por defecto
+SECRET_KEY ="clave_secreta_segura" 
+

@@ -12,6 +12,9 @@ class Clase(db.Model):
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
     estado = db.Column(db.Enum('Activa', 'Inactiva', 'Finalizada'), default='Activa')
 
+    # Relación con horarios
+    horarios = db.relationship('Horario', backref='clase', lazy=True)
+
     def to_dict(self):
         return {
             "id_clase": self.id_clase,
@@ -21,4 +24,21 @@ class Clase(db.Model):
             "precio": float(self.precio or 0),
             "fecha_creacion": self.fecha_creacion.strftime("%Y-%m-%d %H:%M:%S") if self.fecha_creacion else None,
             "estado": self.estado
+        }
+
+
+class Horario(db.Model):
+    __tablename__ = 'horarios'
+
+    id_horario = db.Column(db.Integer, primary_key=True)
+    id_clase = db.Column(db.Integer, db.ForeignKey('clases.id_clase'), nullable=False)
+    dia = db.Column(db.String(20), nullable=False)
+    hora_inicio = db.Column(db.Time, nullable=True)
+    hora_fin = db.Column(db.Time, nullable=True)
+
+    def to_dict(self):
+        return {
+            "id_horario": self.id_horario,
+            "id_clase": self.id_clase,
+            "dia": self.dia,
         }
