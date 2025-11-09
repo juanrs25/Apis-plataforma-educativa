@@ -12,9 +12,7 @@ app = Flask(__name__)
 app.config.from_object(Config)
 db.init_app(app)
 
-# ============================================================
 # CREAR UNA CLASE (y su horario al mismo tiempo)
-# ============================================================
 @app.route('/clases', methods=['POST'])
 def crear_clase():
     data = request.get_json()
@@ -62,9 +60,7 @@ def crear_clase():
     }), 201
 
 
-# ============================================================
 #  OBTENER UNA CLASE POR SU ID
-# ============================================================
 @app.route('/clases/<int:id_clase>', methods=['GET'])
 def obtener_clase(id_clase):
     clase = Clase.query.get(id_clase)
@@ -81,9 +77,7 @@ def obtener_clase(id_clase):
     }), 200
 
 
-# ============================================================
 # ACTUALIZAR UNA CLASE
-# ============================================================
 @app.route('/clases/<int:id_clase>', methods=['PUT'])
 def actualizar_clase(id_clase):
     clase = Clase.query.get(id_clase)
@@ -102,9 +96,7 @@ def actualizar_clase(id_clase):
     return jsonify({"mensaje": "Clase actualizada correctamente", "clase": clase.to_dict()}), 200
 
 
-# ============================================================
 #  ELIMINAR UNA CLASE (también borra su horario)
-# ============================================================
 @app.route('/clases/<int:id_clase>', methods=['DELETE'])
 def eliminar_clase(id_clase):
     clase = Clase.query.get(id_clase)
@@ -119,9 +111,7 @@ def eliminar_clase(id_clase):
     return jsonify({"mensaje": "Clase y su horario eliminados correctamente"}), 200
 
 
-# ============================================================
 #  LISTAR TODAS LAS CLASES
-# ============================================================
 @app.route('/clases', methods=['GET'])
 def listar_clases():
     clases = Clase.query.all()
@@ -134,10 +124,7 @@ def listar_clases():
         })
     return jsonify(resultado), 200
 
-
-# ============================================================
 # INICIO DEL SERVICIO
-# ============================================================
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
