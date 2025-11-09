@@ -1,8 +1,8 @@
 <template>
   <div class="dashboard-container">
     <h2>Bienvenido al Dashboard</h2>
-    <p>Tu rol: {{ auth.rol }}</p>
-    <button @click="cerrarSesion">Cerrar sesión</button>
+    <p>Bienvenido a tu panel de profesor  {{ auth.nombre }}</p>
+    
   </div>
 </template>
 

@@ -102,6 +102,12 @@ def index():
 def registro_publico():
     data = request.get_json()
     rol_id = data.get('rol_id')
+    
+    try:
+        rol_id=int(data.get('rol_id',0))
+    except (ValueError ,TypeError):
+        return jsonify({'message':'Rol invalido'}),400
+    print(f"Rol Procesado como entero:{rol_id}({type(rol_id)})")
     if rol_id not in [2, 3]:
         return jsonify({'message': 'Rol inválido para registro público'}), 400
 
@@ -125,13 +131,13 @@ def login():
     usuario = Usuario.query.filter_by(Usuario=data['Usuario']).first()
 
     if not usuario:
-        return jsonify({'message': 'Usuario no encontrado'}), 404
+        return jsonify({'message': 'Credenciales invalidas'}), 404
 
     if not bcrypt.checkpw(data['Clave'].encode('utf-8'), usuario.Clave.encode('utf-8')):
-        return jsonify({'message': 'Contraseña incorrecta'}), 401
+        return jsonify({'message': 'Credenciales invalidas'}), 401
 
     # Tiempo de expiración del token: 5 minutos
-    exp_time = datetime.utcnow() + timedelta(minutes=5)
+    exp_time = datetime.utcnow() + timedelta(minutes=1)
 
     token = jwt.encode({
         'id': usuario.id,
@@ -143,7 +149,9 @@ def login():
         'message': 'Inicio de sesión exitoso',
         'token': token,
         'rol': usuario.rol.nombre,
+         'nombre': usuario.Nombre_Completo,
         'expira_en': exp_time.isoformat() + 'Z'  # Muestra cuándo expira
+        
     }), 200
 
 
