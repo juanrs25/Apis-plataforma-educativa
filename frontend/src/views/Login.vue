@@ -26,6 +26,7 @@
       <p class="message">{{ mensaje }}</p>
     </div>
   </div>
+  
 </template>
 
 <script setup>
@@ -44,11 +45,17 @@ const loginUsuario = async () => {
     const res = await axios.post("http://localhost:5001/login", form.value);
     auth.login(res.data.token, res.data.rol, res.data.nombre);
     mensaje.value = res.data.message;
+
+      const rol = res.data.rol?.toLowerCase();
     if (res.data.rol?.toLowerCase() === "cliente") {
       router.push("/home");
   } else if (res.data.rol?.toLowerCase() === "docente") {
       router.push("/dashboard");
+    }else if (res.data.rol?.toLowerCase()=== "admin") {
+      router.push("/adminpanel"); // 👈 aquí redirige al componente AdminPanel.vue
     }
+
+    
   } catch (err) {
     mensaje.value =
       err.response?.data?.message || "Error en el inicio de sesión";

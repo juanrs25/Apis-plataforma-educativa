@@ -155,7 +155,25 @@ def login():
     }), 200
 
 
-# RUTAS ADMIN------------------------------------------------------------------------------------------------
+# RUTAS ADMIN---------------------------------------------------------------------------------------
+#OBTENER USUARIO POR ID
+@app.route('/usuarios/<int:id_usuario>', methods=['GET'])
+@token_requerido
+def obtener_usuario(id_usuario):
+    user = Usuario.query.get(id_usuario)
+    if not user:
+        return jsonify({'error': 'Usuario no encontrado'}), 404
+
+    return jsonify({
+        'id': user.id,
+        'Usuario': user.Usuario,
+        'Nombre_Completo': user.Nombre_Completo,
+        'Email': user.Email,
+        'rol': user.rol.nombre if user.rol else None,
+        'activo': user.activo
+    }), 200
+
+#Funcion para listar todos los usuarios
 @app.route('/usuarios', methods=['GET'])
 @token_requerido
 def get_usuarios(usuario):
