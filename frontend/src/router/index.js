@@ -7,11 +7,12 @@ import AdminPanel from '../views/AdminPanel.vue'
 
 const routes = [
   { path: '/', redirect: '/home' },      // Redirige raíz a home
-  { path: '/home', component: Home },    // Ahora sí existe /home
+  { path: '/home', component: Home },    
   { path: '/login', component: Login },
   { path: '/registro', component: Registro },
   { path: '/dashboard', component: Dashboard },
-  { path: '/admin', component: AdminPanel },
+  { path: '/adminpanel', component: AdminPanel },
+
 ]
 
 const router = createRouter({

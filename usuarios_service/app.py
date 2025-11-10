@@ -137,7 +137,7 @@ def login():
         return jsonify({'message': 'Credenciales invalidas'}), 401
 
     # Tiempo de expiración del token: 5 minutos
-    exp_time = datetime.utcnow() + timedelta(minutes=1)
+    exp_time = datetime.utcnow() + timedelta(minutes=60)
 
     token = jwt.encode({
         'id': usuario.id,

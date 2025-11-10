@@ -7,6 +7,7 @@
         <div class="guest-links">
           <a href="/registro" class="nav-link">Registro</a>
           <a href="/login" class="nav-link">Login</a>
+          <a href="/We" class="nav-link">Acerca de Nosotros</a>
         </div>
       </template>
 
@@ -15,13 +16,48 @@
         <template v-if="auth.rol.toLowerCase() === 'cliente'">
           <a href="/clases" class="nav-link">Clases Solicitadas</a>
           <a href="/pqrs" class="nav-link">PQRS</a>
-          <a href="/acerca" class="nav-link">Acerca de Nosotros</a>
+          <a href="/mis-pqrs" class="nav-link">Mis PQR</a>
+          <a href="/We" class="nav-link">Acerca de Nosotros</a>
+          
         </template>
 
         <!-- DOCENTE -->
         <template v-else-if="auth.rol && auth.rol.toLowerCase() === 'docente'">
+          <a
+            href="/Dashboard"
+            class="nav-link"
+            style="
+              color: #16a34a;
+              text-decoration: underline;
+              font-weight: 600;
+              transition: color 0.3s ease;
+            "
+            >Volver a mi panel</a
+          >
           <a href="/pqrs" class="nav-link">PQRS</a>
           <a href="/mis-pqrs" class="nav-link">Mis PQR</a>
+          <a href="/Ayuda" class="nav-link">Soporte / Ayuda</a>
+          <a href="/We" class="nav-link">Acerca de Nosotros</a>
+           
+        </template>
+
+        <!-- ADMIN -->
+        <template v-else-if="auth.rol && auth.rol.toLowerCase() === 'admin'">
+          <a
+            href="/AdminPanel"
+            class="nav-link"
+            style="
+              color: #16a34a;
+              text-decoration: underline;
+              font-weight: 600;
+              transition: color 0.3s ease;
+            "
+            >Volver a mi panel</a
+          >
+
+          <a href="/usuarios" class="nav-link">Usuarios</a>
+          <a href="/PQRSC" class="nav-link">Reportes Clientes</a>
+          <a href="/PQRSD" class="nav-link">Reportes Docentes</a>
         </template>
 
         <div class="user-menu">
@@ -88,10 +124,7 @@ const cerrarSesion = () => {
   min-width: 160px;
   text-align: left;
   z-index: 2000;
-
 }
-
-
 
 /* Nombre y rol */
 .dropdown-name {
@@ -157,7 +190,7 @@ const cerrarSesion = () => {
 .nav-links-group {
   display: flex;
   align-items: center;
-  flex: 0.6; /* Añadir esta línea si no está */
+  flex: 0.76; /* Añadir esta línea si no está */
 }
 
 .logout-btn {
