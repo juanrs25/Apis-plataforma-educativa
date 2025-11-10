@@ -102,6 +102,15 @@ def index():
 def registro_publico():
     data = request.get_json()
     rol_id = data.get('rol_id')
+
+    try:
+        # Convertimos a entero (y manejamos el caso si no llega)
+        rol_id = int(data.get('rol_id', 0))
+    except (ValueError, TypeError):
+        return jsonify({'message': 'Rol inválido'}), 400
+
+    print(f"✅ Rol procesado como entero: {rol_id} ({type(rol_id)})")
+
     if rol_id not in [2, 3]:
         return jsonify({'message': 'Rol inválido para registro público'}), 400
 

@@ -12,10 +12,10 @@
           <input v-model="form.Direccion" type="text" placeholder="Dirección" required />
           <input v-model="form.Email" type="email" placeholder="Correo electrónico" required />
 
-          <select v-model="form.rol_id" required>
+          <select v-model.number="form.rol_id" required>
             <option disabled value="">Selecciona un rol</option>
-            <option value="2">Cliente</option>
-            <option value="3">Docente</option>
+            <option :value="2">Cliente</option>
+            <option :value="3">Docente</option>
           </select>
 
           <button type="submit" class="btn-registrar">Registrar</button>
