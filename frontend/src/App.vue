@@ -16,7 +16,7 @@ import Navbar from './components/Navbar.vue'
 body{
   background-color: #E0E0E0;
 }
-/* 🔹 Agrega un margen superior para que el contenido no quede debajo del navbar */
+/* Agrega un margen superior para que el contenido no quede debajo del navbar */
 .contenido-principal {
   margin-top: 70px; /* Altura un poco mayor que la del navbar */
   padding: 20px;

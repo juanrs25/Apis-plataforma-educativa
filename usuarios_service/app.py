@@ -134,13 +134,13 @@ def login():
     usuario = Usuario.query.filter_by(Usuario=data['Usuario']).first()
 
     if not usuario:
-        return jsonify({'message': 'Usuario no encontrado'}), 404
+        return jsonify({'message': 'Credenciales invalidas'}), 404
 
     if not bcrypt.checkpw(data['Clave'].encode('utf-8'), usuario.Clave.encode('utf-8')):
-        return jsonify({'message': 'Contraseña incorrecta'}), 401
+        return jsonify({'message': 'Credenciales invalidas'}), 401
 
     # Tiempo de expiración del token: 5 minutos
-    exp_time = datetime.utcnow() + timedelta(minutes=5)
+    exp_time = datetime.utcnow() + timedelta(minutes=60)
 
     token = jwt.encode({
         'id': usuario.id,
@@ -152,11 +152,31 @@ def login():
         'message': 'Inicio de sesión exitoso',
         'token': token,
         'rol': usuario.rol.nombre,
+         'nombre': usuario.Nombre_Completo,
         'expira_en': exp_time.isoformat() + 'Z'  # Muestra cuándo expira
+        
     }), 200
 
 
-# RUTAS ADMIN------------------------------------------------------------------------------------------------
+# RUTAS ADMIN---------------------------------------------------------------------------------------
+#OBTENER USUARIO POR ID
+@app.route('/usuarios/<int:id_usuario>', methods=['GET'])
+@token_requerido
+def obtener_usuario(id_usuario):
+    user = Usuario.query.get(id_usuario)
+    if not user:
+        return jsonify({'error': 'Usuario no encontrado'}), 404
+
+    return jsonify({
+        'id': user.id,
+        'Usuario': user.Usuario,
+        'Nombre_Completo': user.Nombre_Completo,
+        'Email': user.Email,
+        'rol': user.rol.nombre if user.rol else None,
+        'activo': user.activo
+    }), 200
+
+#Funcion para listar todos los usuarios
 @app.route('/usuarios', methods=['GET'])
 @token_requerido
 def get_usuarios(usuario):

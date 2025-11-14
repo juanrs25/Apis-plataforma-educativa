@@ -1,6 +1,6 @@
 <template>
   <div class="home">
-    <!-- 🎠 CARRUSEL -->
+    <!--  CARRUSEL -->
     <section class="carousel-section">
       <swiper
         loop
@@ -14,13 +14,13 @@
           <div class="carousel-text">
             <h2>{{ item.title }}</h2>
             <p>{{ item.description }}</p>
-            <a href="/registro" class="btn">Comenzar</a>
+            <!-- <a href="" class="btn">Comenzar</a> -->
           </div>
         </swiper-slide>
       </swiper>
     </section>
 
-    <!-- 📚 SECCIÓN DE CURSOS -->
+    <!--  SECCIÓN DE CURSOS -->
     <section class="cursos-section">
       <h2>Cursos Destacados</h2>
       <div class="cursos-grid">
@@ -28,12 +28,12 @@
           <img :src="curso.image" alt="curso" />
           <h3>{{ curso.nombre }}</h3>
           <p>{{ curso.descripcion }}</p>
-          <a href="/registro" class="btn-small">Inscribirse</a>
+          <a href="" class="btn-small">Inscribirse</a>
         </div>
       </div>
     </section>
 
-    <!-- 🏛️ INFORMACIÓN DE LA PLATAFORMA -->
+    <!--  INFORMACIÓN DE LA PLATAFORMA -->
     <section class="info-section">
       <div class="info-card">
         <h3>Misión</h3>
@@ -49,7 +49,7 @@
       </div>
     </section>
 
-    <!-- ⚓ FOOTER -->
+    <!--  FOOTER -->
     <footer class="footer">
       <p>© 2025 Plataforma Educativa Inclusiva - Todos los derechos reservados</p>
     </footer>

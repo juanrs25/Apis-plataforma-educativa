@@ -4,6 +4,7 @@
       <!-- Columna izquierda: formulario -->
       <div class="form-section">
         <h2>Registro de Usuario</h2>
+
         <form @submit.prevent="registrar" class="formulario">
           <input v-model="form.Usuario" placeholder="Usuario" required />
           <input v-model="form.Clave" type="password" placeholder="Contraseña" required />
@@ -18,8 +19,31 @@
             <option :value="3">Docente</option>
           </select>
 
+          <!-- Campos adicionales SOLO para Docentes -->
+          <template v-if="form.rol_id === 3">
+            <input
+              v-model="form.Experiencia"
+              type="text"
+              placeholder="Experiencia laboral"
+              required
+            />
+            <input
+              v-model="form.Titulo_Profesional"
+              type="text"
+              placeholder="Título profesional"
+              required
+            />
+            <input
+              type="file"
+              @change="handleFileUpload"
+              accept=".pdf,.doc,.docx"
+              required
+            />
+          </template>
+
           <button type="submit" class="btn-registrar">Registrar</button>
         </form>
+
         <p class="mensaje">{{ mensaje }}</p>
       </div>
 
@@ -27,8 +51,8 @@
       <div class="welcome-section">
         <h2>¡Bienvenido!</h2>
         <p>
-          Crea tu cuenta para acceder a nuestra plataforma educativa y disfrutar
-          de herramientas interactivas, recursos exclusivos y más.
+          Accede con tu cuenta para ingresar a nuestra plataforma educativa, donde encontrarás tus cursos, 
+          materiales de estudio y recursos académicos disponibles.
         </p>
         <router-link to="/login">
           <button class="btn-login">Iniciar sesión</button>
@@ -49,14 +73,28 @@ const form = ref({
   Telefono: '',
   Direccion: '',
   Email: '',
-  rol_id: ''
+  rol_id: '',
+  Experiencia: '',
+  Titulo_Profesional: ''
 })
 
+const archivo = ref(null)
 const mensaje = ref('')
+
+const handleFileUpload = (e) => {
+  archivo.value = e.target.files[0]
+}
 
 const registrar = async () => {
   try {
-    const res = await axios.post('http://localhost:5001/registro', form.value)
+    const formData = new FormData()
+    Object.entries(form.value).forEach(([key, value]) => formData.append(key, value))
+    if (archivo.value) formData.append('Hoja_de_Vida', archivo.value)
+
+    const res = await axios.post('http://localhost:5001/registro', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+
     mensaje.value = res.data.message
   } catch (err) {
     mensaje.value = err.response?.data?.message || 'Error en el registro'
@@ -65,24 +103,21 @@ const registrar = async () => {
 </script>
 
 <style scoped>
-/* Centrado del contenedor general */
+/* Contenedor principal centrado */
 .registro-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 75vh;
-  width: 840px;
-  background: linear-gradient(135deg, #7db2ff, #0b08d3);
+  min-height: 90vh;
+  width: 100%;
   font-family: "Poppins", sans-serif;
 }
 
-/* Tarjeta con dos secciones */
+/* Tarjeta general con dos secciones lado a lado */
 .registro-card {
   display: flex;
-  width: 800px;
-  height: 500px;
-
-  background: #fbfbfb;
+  width: 900px;
+  background: linear-gradient(170deg, #efefef, #07B3FA);
   border-radius: 20px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   overflow: hidden;
@@ -94,25 +129,38 @@ const registrar = async () => {
   padding: 40px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
+  background: rgba(255, 255, 255, 0.15);
 }
 
-.form-section h2 {
-  margin-bottom: 20px;
-  text-align: center;
-  color: #333;
-}
-
+/* Si el contenido crece, se activa el scroll interno */
 .formulario {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-height: 420px;
+  overflow-y: auto;
+  padding-right: 5px;
+}
+
+.formulario::-webkit-scrollbar {
+  width: 6px;
+}
+.formulario::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
+}
+
+.form-section h2 {
+  margin-bottom: 15px;
+  text-align: center;
+  color: #000000;
 }
 
 .formulario input,
 .formulario select {
   padding: 12px;
-  border: 1px solid #ccc;
+  border: 1px solid #fff;
   border-radius: 8px;
   outline: none;
   transition: border 0.3s;
@@ -120,14 +168,14 @@ const registrar = async () => {
 
 .formulario input:focus,
 .formulario select:focus {
-  border-color: #340bfe;
+  border-color: #07B3FA;
 }
 
 .btn-registrar {
   margin-top: 10px;
   padding: 12px;
-  background-color: #2d08e6;
-  color: white;
+  background-color: #f9f9f9;
+  color: #000;
   font-weight: bold;
   border: none;
   border-radius: 8px;
@@ -136,19 +184,19 @@ const registrar = async () => {
 }
 
 .btn-registrar:hover {
-  background-color: #3620a5;
+  background-color: #07B3FA;
 }
 
 .mensaje {
   margin-top: 10px;
-  color: #333;
+  color: #000;
   text-align: center;
 }
 
 /* Sección derecha: bienvenida */
 .welcome-section {
   flex: 1;
-  background: linear-gradient(135deg, #2201c8, #3a03de);
+  background: linear-gradient(135deg, #07B3FA, #efefef);
   color: white;
   display: flex;
   flex-direction: column;
@@ -160,17 +208,19 @@ const registrar = async () => {
 
 .welcome-section h2 {
   margin-bottom: 10px;
+  color: #000;
 }
 
 .welcome-section p {
   margin-bottom: 20px;
   font-size: 1rem;
   line-height: 1.5;
+  color: #000;
 }
 
 .btn-login {
   background: white;
-  color: #7b61ff;
+  color: #000;
   font-weight: bold;
   border: none;
   padding: 12px 24px;
