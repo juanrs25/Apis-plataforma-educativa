@@ -1,7 +1,6 @@
 from spyne import ServiceBase, rpc, Integer, Unicode, Array
 from db import SessionLocal
 from models import PQRS
-from datetime import datetime
 import requests
 
 
@@ -11,7 +10,6 @@ class PQRService(ServiceBase):
     def usuario_existe(id_usuario):
         try:
             url = f"http://localhost:5001/usuarios-public/{id_usuario}"
-
             response = requests.get(url, timeout=3)
 
             if response.status_code != 200:
@@ -22,6 +20,7 @@ class PQRService(ServiceBase):
 
         except:
             return False
+
 
     @rpc(Integer, Unicode, Unicode, Unicode, Unicode, _returns=Unicode)
     def crearPQR(ctx, id_usuario, tipo, asunto, descripcion, fecha_creacion):
@@ -49,15 +48,13 @@ class PQRService(ServiceBase):
         finally:
             db.close()
 
-    @rpc(Integer, _returns=Array(Unicode))
-    def listarPQR(ctx, id_usuario):
 
-        if not PQRService.usuario_existe(id_usuario):
-            return ["El usuario no existe en el servicio de usuarios"]
+    @rpc(_returns=Array(Unicode))
+    def listarPQR(ctx):
 
         db = SessionLocal()
         try:
-            lista = db.query(PQRS).filter_by(id_usuario=id_usuario).all()
+            lista = db.query(PQRS).all()
             salida = []
 
             for p in lista:
@@ -71,6 +68,7 @@ class PQRService(ServiceBase):
 
         finally:
             db.close()
+
 
     @rpc(Integer, Unicode, Unicode, Unicode, _returns=Unicode)
     def actualizarPQR(ctx, id, tipo, asunto, descripcion):
@@ -95,6 +93,7 @@ class PQRService(ServiceBase):
 
         finally:
             db.close()
+
 
     @rpc(Integer, _returns=Unicode)
     def eliminarPQR(ctx, id):

@@ -167,7 +167,7 @@ def usuario_public(id_usuario):
     return jsonify({
         'existe': True,
         'id': user.id,
-        'activo': user.activo,
+        #'activo': user.activo,
         'rol': user.rol.nombre if user.rol else None
     }), 200
 
