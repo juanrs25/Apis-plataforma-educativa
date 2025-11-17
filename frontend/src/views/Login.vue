@@ -64,7 +64,7 @@ const loginUsuario = async () => {
   } else if (res.data.rol?.toLowerCase() === "docente") {
       router.push("/dashboard");
     }else if (res.data.rol?.toLowerCase()=== "admin") {
-      router.push("/adminpanel"); // 👈 aquí redirige al componente AdminPanel.vue
+      router.push("/adminpanel"); 
     }
 
     

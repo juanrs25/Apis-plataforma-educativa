@@ -10,19 +10,19 @@ APP_TNS = "spyne.servicio.pqrs"
 
 # 2. Aplicación Spyne
 application = Application(
-    [PQRService],                        # Lista de servicios
-    tns=APP_TNS,                         # Namespace del servicio
-    in_protocol=Soap11(validator="lxml"),# SOAP 1.1 entrada
-    out_protocol=Soap11()                # SOAP 1.1 salida
+    [PQRService],                        
+    tns=APP_TNS,                         
+    in_protocol=Soap11(validator="lxml"),
+    out_protocol=Soap11()                
 )
 
-# 3. Crear la aplicación WSGI
+
 wsgi_application = WsgiApplication(application)
 
 # 4. Iniciar servidor
 if __name__ == "__main__":
     server_address = "127.0.0.1"
-    server_port = 5003   # Puedes dejarlo como otro microservicio
+    server_port = 5003   
     
     server = make_server(server_address, server_port, wsgi_application)
 

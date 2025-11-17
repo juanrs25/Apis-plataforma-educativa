@@ -5,10 +5,12 @@ from db import db
 from models import Clase, Horario
 import requests
 from datetime import datetime
+from flask_cors import CORS
 
 
 
 app = Flask(__name__)
+CORS(app)
 app.config.from_object(Config)
 db.init_app(app)
 
@@ -60,21 +62,21 @@ def crear_clase():
     }), 201
 
 
-#  OBTENER UNA CLASE POR SU ID
-@app.route('/clases/<int:id_clase>', methods=['GET'])
-def obtener_clase(id_clase):
-    clase = Clase.query.get(id_clase)
-    if not clase:
-        return jsonify({"error": "Clase no encontrada"}), 404
 
-    # Obtener el horario asociado
-    horarios = Horario.query.filter_by(id_clase=id_clase).all()
-    horarios_dict = [h.to_dict() for h in horarios]
+#  OBTENER CLASES POR PROFESOR
+@app.route('/clases/profesor/<int:profesor_id>', methods=['GET'])
+def obtener_clases_de_profesor(profesor_id):
+    clases = Clase.query.filter_by(profesor_id=profesor_id).all()
 
-    return jsonify({
-        "clase": clase.to_dict(),
-        "horarios": horarios_dict
-    }), 200
+    resultado = []
+    for c in clases:
+        horarios = Horario.query.filter_by(id_clase=c.id_clase).all()
+        resultado.append({
+            "clase": c.to_dict(),
+            "horarios": [h.to_dict() for h in horarios]
+        })
+
+    return jsonify(resultado), 200
 
 
 # ACTUALIZAR UNA CLASE

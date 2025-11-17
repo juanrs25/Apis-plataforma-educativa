@@ -140,7 +140,7 @@ def login():
         return jsonify({'message': 'Credenciales invalidas'}), 401
 
     # Tiempo de expiración del token: 5 minutos
-    exp_time = datetime.utcnow() + timedelta(minutes=60)
+    exp_time = datetime.utcnow() + timedelta(minutes=1)
 
     token = jwt.encode({
         'id': usuario.id,
@@ -155,6 +155,20 @@ def login():
          'nombre': usuario.Nombre_Completo,
         'expira_en': exp_time.isoformat() + 'Z'  # Muestra cuándo expira
         
+    }), 200
+
+# ENDPOINT PUBLICO PARA MICRO-SERVICIOS (NO REQUIERE TOKEN)
+@app.route('/usuarios-public/<int:id_usuario>', methods=['GET'])
+def usuario_public(id_usuario):
+    user = Usuario.query.get(id_usuario)
+    if not user:
+        return jsonify({'existe': False}), 404
+
+    return jsonify({
+        'existe': True,
+        'id': user.id,
+        'activo': user.activo,
+        'rol': user.rol.nombre if user.rol else None
     }), 200
 
 

@@ -26,15 +26,27 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(clase, index) in clases" :key="index">
-          <td>{{ clase.nombre }}</td>
-          <td>{{ clase.descripcion }}</td>
-          <td>{{ clase.fecha }}</td>
-          <td>{{ clase.dia }}</td>
-          <td>{{ clase.precio }}</td>
+        <tr v-for="(item, index) in clases" :key="index">
+          <td>{{ item.clase.titulo }}</td>
+          <td>{{ item.clase.descripcion }}</td>
+          <td>{{ item.clase.fecha_creacion }}</td>
+
           <td>
-            <span class="estado-activo">{{ clase.estado }}</span>
+            <span v-if="item.horarios && item.horarios.length > 0">
+              {{ item.horarios[0].dia }}
+            </span>
+            <span v-else>—</span>
           </td>
+
+          <td>{{ formatCOP(item.clase.precio) }}</td>
+
+
+          <td>
+            <span class="estado-activo">
+              {{ item.clase.estado }}
+            </span>
+          </td>
+
           <td class="acciones">
             <button class="btn-editar"><i class="fas fa-pen"></i></button>
             <button class="btn-eliminar"><i class="fas fa-trash"></i></button>
@@ -58,36 +70,59 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from "vue";
+import axios from "axios";
+import { useAuthStore } from "../store/auth";
 
-const clases = ref([
-  {
-    nombre: 'Ingles',
-    descripcion: 'todo dobre ingles',
-    fecha: '2025-05-22',
-    dia: 'Martes',
-    precio: '$14,000 COP',
-    estado: 'Activa',
-  },
-  {
-    nombre: 'Limites hacia el infinito',
-    descripcion: 'Aprenderas todo acerca factorizacion',
-    fecha: '2025-05-18',
-    dia: 'Sábado',
-    precio: '$12,000 COP',
-    estado: 'Activa',
-  },
-])
+const auth = useAuthStore();
+const clases = ref([]);
+
+onMounted(async () => {
+  // Sincroniza store con localStorage
+  auth.token = localStorage.getItem("token");
+  auth.id = Number(localStorage.getItem("id"));
+  auth.rol = localStorage.getItem("rol");
+  auth.nombre = localStorage.getItem("nombre");
+
+  console.log("ID después de sincronizar:", auth.id);
+
+  if (!auth.id) {
+    console.warn("El ID sigue siendo null — No puedo cargar clases.");
+    return;
+  }
+
+  try {
+    const response = await axios.get(
+      `http://127.0.0.1:5002/clases/profesor/${auth.id}`
+    );
+
+  
+    clases.value = response.data;
+
+  } catch (error) {
+    console.error("Error cargando clases:", error);
+  }
+});
+
+const formatCOP = (value) => {
+  return new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: "COP",
+    minimumFractionDigits: 0
+  }).format(value);
+};
+
+
 </script>
 
 <style scoped>
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css');
+@import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css");
 
 .dashboard {
   background-color: #f9fafb;
   padding: 40px;
   min-height: 100vh;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   color: #000;
 }
 
