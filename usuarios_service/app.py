@@ -140,7 +140,7 @@ def login():
         return jsonify({'message': 'Credenciales invalidas'}), 401
 
     # Tiempo de expiración del token: 5 minutos
-    exp_time = datetime.utcnow() + timedelta(minutes=1)
+    exp_time = datetime.utcnow() + timedelta(minutes=60)
 
     token = jwt.encode({
         'id': usuario.id,
@@ -176,7 +176,8 @@ def usuario_public(id_usuario):
 #OBTENER USUARIO POR ID
 @app.route('/usuarios/<int:id_usuario>', methods=['GET'])
 @token_requerido
-def obtener_usuario(id_usuario):
+def obtener_usuario(usuario, id_usuario):
+
     user = Usuario.query.get(id_usuario)
     if not user:
         return jsonify({'error': 'Usuario no encontrado'}), 404

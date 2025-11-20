@@ -188,6 +188,8 @@ const rechazarDocente = (docente) => {
 .acciones {
   display: flex;
   gap: 8px;
+  align-items: center;
+  height: 100%;
 }
 
 .btn-aprobar {

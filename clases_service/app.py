@@ -28,7 +28,7 @@ def crear_clase():
 
     # Verificar que el profesor exista en la API de usuarios
     try:
-        resp = requests.get(f'http://localhost:5001/usuarios/{profesor_id}', timeout=3)
+        resp = requests.get(f'http://localhost:5001/usuarios-public/{profesor_id}', timeout=3)
         if resp.status_code != 200:
             return jsonify({"error": "El profesor no existe"}), 400
     except requests.exceptions.RequestException:
