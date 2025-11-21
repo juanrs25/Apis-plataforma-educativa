@@ -8,27 +8,36 @@ from datetime import datetime
 from flask_cors import CORS
 
 
+#   CONFIGURACIÓN APP Y BASE
 
 app = Flask(__name__)
 CORS(app)
 app.config.from_object(Config)
 db.init_app(app)
 
-# CREAR UNA CLASE (y su horario al mismo tiempo)
+
+#   CACHE DE PROFESORES
+
+cache_profesores = {}   # id → nombre
+
+
+
+#   CREAR UNA CLASE
+
 @app.route('/clases', methods=['POST'])
 def crear_clase():
     data = request.get_json()
 
     # Validación de campos requeridos
     if not data.get('titulo') or not data.get('profesor_id') or not data.get('dia'):
-        return jsonify({"error": "Faltan campos obligatorios (titulo, profesor_id o dia)"}), 400
+        return jsonify({"error": "Faltan campos obligatorios"}), 400
 
     profesor_id = data['profesor_id']
     dia = data['dia']
 
-    # Verificar que el profesor exista en la API de usuarios
+    # Verificar profesor en API usuarios
     try:
-        resp = requests.get(f'http://localhost:5001/usuarios-public/{profesor_id}', timeout=3)
+        resp = requests.get(f'http://localhost:5001/usuarios-public/{profesor_id}', timeout=2)
         if resp.status_code != 200:
             return jsonify({"error": "El profesor no existe"}), 400
     except requests.exceptions.RequestException:
@@ -63,7 +72,48 @@ def crear_clase():
 
 
 
-#  OBTENER CLASES POR PROFESOR
+#   LISTAR TODAS LAS CLASES (CON CACHÉ)
+
+@app.route('/clases', methods=['GET'])
+def listar_clases():
+    clases = Clase.query.all()
+    resultado = []
+
+    # Obtener IDs únicos de profesores
+    profesor_ids = list({c.profesor_id for c in clases})
+
+    # Llenar caché si faltan profesores
+    for pid in profesor_ids:
+        if pid in cache_profesores:
+            continue
+
+        # Llamada a la API SOLO si no está en caché
+        try:
+            resp = requests.get(f"http://localhost:5001/usuarios-public/{pid}", timeout=1)
+            if resp.status_code == 200:
+                data = resp.json()
+                cache_profesores[pid] = data.get("Nombre_Completo", "Desconocido")
+            else:
+                cache_profesores[pid] = "Desconocido"
+        except:
+            cache_profesores[pid] = "Desconocido"
+
+    # Armar respuesta
+    for c in clases:
+        resultado.append({
+            "clase": c.to_dict(),
+            "horarios": [h.to_dict() for h in c.horarios],
+            "profesor": {
+                "nombre": cache_profesores.get(c.profesor_id, "Desconocido")
+            }
+        })
+
+    return jsonify(resultado), 200
+
+
+
+#   OBTENER CLASES DE UN PROFESOR
+
 @app.route('/clases/profesor/<int:profesor_id>', methods=['GET'])
 def obtener_clases_de_profesor(profesor_id):
     clases = Clase.query.filter_by(profesor_id=profesor_id).all()
@@ -79,7 +129,9 @@ def obtener_clases_de_profesor(profesor_id):
     return jsonify(resultado), 200
 
 
-# ACTUALIZAR UNA CLASE
+
+#   ACTUALIZAR CLASE
+
 @app.route('/clases/<int:id_clase>', methods=['PUT'])
 def actualizar_clase(id_clase):
     clase = Clase.query.get(id_clase)
@@ -88,7 +140,7 @@ def actualizar_clase(id_clase):
 
     data = request.get_json()
 
-    # Actualizar solo los campos enviados
+    # Actualizar solo lo enviado
     clase.titulo = data.get('titulo', clase.titulo)
     clase.descripcion = data.get('descripcion', clase.descripcion)
     clase.precio = data.get('precio', clase.precio)
@@ -98,7 +150,9 @@ def actualizar_clase(id_clase):
     return jsonify({"mensaje": "Clase actualizada correctamente", "clase": clase.to_dict()}), 200
 
 
-#  ELIMINAR UNA CLASE (también borra su horario)
+
+#   ELIMINAR CLASE
+
 @app.route('/clases/<int:id_clase>', methods=['DELETE'])
 def eliminar_clase(id_clase):
     clase = Clase.query.get(id_clase)
@@ -113,34 +167,10 @@ def eliminar_clase(id_clase):
     return jsonify({"mensaje": "Clase y su horario eliminados correctamente"}), 200
 
 
-@app.route('/clases', methods=['GET'])
-def listar_clases():
-    clases = Clase.query.all()
-    resultado = []
+#   EJECUCIÓN DEL SERVICIO
 
-    for c in clases:
-        profesor_nombre = "Desconocido"
-
-        # Consultar API de usuarios
-        try:
-            resp = requests.get(f"http://localhost:5001/usuarios-public/{c.profesor_id}", timeout=2)
-            if resp.status_code == 200:
-                profesor_nombre = resp.json().get("Nombre_Completo", "Desconocido")
-        except:
-            pass
-
-        resultado.append({
-            "clase": c.to_dict(),
-            "horarios": [h.to_dict() for h in c.horarios],
-            "profesor": {
-                "nombre": profesor_nombre
-            }
-        })
-
-    return jsonify(resultado), 200
-
-# INICIO DEL SERVICIO
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+
     app.run(port=5002, debug=True)
