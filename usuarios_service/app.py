@@ -39,7 +39,9 @@ def crear_usuario(data, rol_id, activo=True, estado='Aprobado'):
         Email=data.get('Email'),
         rol_id=rol_id,
         activo=activo,
-        estado_verificacion=estado
+        estado_verificacion=estado,
+        experiencia_laboral=data.get('experiencia_laboral'),
+        titulo_profesional=data.get('titulo_profesional')
     )
 
 # DECORADORES----------------------------------------
@@ -168,7 +170,8 @@ def usuario_public(id_usuario):
         'existe': True,
         'id': user.id,
         #'activo': user.activo,
-        'rol': user.rol.nombre if user.rol else None
+        'rol': user.rol.nombre if user.rol else None,
+        'Nombre_Completo': user.Nombre_Completo
     }), 200
 
 
@@ -219,6 +222,28 @@ def get_usuarios(usuario):
         'rol': u.rol.nombre if u.rol else None,
         
     } for u in usuarios]), 200
+
+
+@app.route('/docentes', methods=['GET'])
+def listar_docentes():
+    docentes = Usuario.query.join(Rol).filter(
+        Rol.nombre == 'Docente',
+        Usuario.activo == True
+    ).all()
+
+    return jsonify({
+        "usuarios": [{
+            "id_usuario": d.id,
+            "nombre": d.Nombre_Completo,
+            "correo": d.Email,
+            "telefono": d.Telefono,
+            "foto": None,  # puedes cambiarlo si agregas foto
+            "titulo": d.titulo_profesional,
+            "experiencia": d.experiencia_laboral
+        } for d in docentes]
+    }), 200
+
+
             
 #--------------------------------------------------------------------------------------------------------------------------
 # ACTUALIZAR USUARIO (solo Admin)

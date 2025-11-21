@@ -211,7 +211,7 @@ const rechazarDocente = (docente) => {
   color: white;
   border: none;
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: 6px; 
   cursor: pointer;
   font-weight: 600;
 }

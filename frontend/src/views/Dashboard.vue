@@ -54,17 +54,52 @@
 
           <div class="modal-buttons">
             <button class="btn-cancel" @click="closeEdit">Cancelar</button>
-            <button
-              id="btnActualizar"
-              class="btn-editar"
-              translate="no"
-              autocomplete="off"
-              autocorrect="off"
-              autocapitalize="off"
-              spellcheck="false"
-              @click="actualizarClase"
-            >
+            <button class="btn-editar" @click="actualizarClase">
               Actualizar
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
+
+    <!-- MODAL CREAR CLASE -->
+    <transition name="fade">
+      <div v-if="showCreate" class="modal-overlay">
+        <div class="modal">
+          <h3>Crear nueva clase</h3>
+
+          <div class="form-group">
+            <label>Título</label>
+            <input v-model="createForm.titulo" />
+          </div>
+
+          <div class="form-group">
+            <label>Descripción</label>
+            <input v-model="createForm.descripcion" />
+          </div>
+
+          <div class="form-group">
+            <label>Precio</label>
+            <input type="number" v-model.number="createForm.precio" />
+          </div>
+
+          <div class="form-group">
+            <label>Día</label>
+            <select v-model="createForm.dia">
+              <option value="Lunes">Lunes</option>
+              <option value="Martes">Martes</option>
+              <option value="Miércoles">Miércoles</option>
+              <option value="Jueves">Jueves</option>
+              <option value="Viernes">Viernes</option>
+              <option value="Sábado">Sábado</option>
+              <option value="Domingo">Domingo</option>
+            </select>
+          </div>
+
+          <div class="modal-buttons">
+            <button class="btn-cancel" @click="closeCreate">Cancelar</button>
+            <button class="btn-accept" :disabled="creating" @click="crearClase">
+              {{ creating ? "Creando..." : "Crear" }}
             </button>
           </div>
         </div>
@@ -95,7 +130,7 @@
       </button>
     </div>
 
-    <!-- TABLA DE CLASES -->
+    <!-- TABLA -->
     <table class="tabla">
       <thead>
         <tr>
@@ -132,7 +167,6 @@
             <button class="btn-eliminar" @click="openConfirm(item.clase)">
               <i class="fas fa-trash"></i>
             </button>
-
             <button class="btn-editar" @click="abrirEditar(item.clase)">
               <i class="fas fa-pen"></i>
             </button>
@@ -141,7 +175,7 @@
       </tbody>
     </table>
 
-    <!-- SECCIÓN: SOLICITUDES -->
+    <!-- SECCIÓN SOLICITUDES -->
     <div class="solicitudes">
       <div class="solicitudes-header">
         <i class="fas fa-users"></i>
@@ -163,9 +197,15 @@ import { useAuthStore } from "../store/auth";
 const auth = useAuthStore();
 const clases = ref([]);
 
+const BACKEND_BASE = "http://127.0.0.1:5002";
+
+/* ------------------ MODALES ------------------ */
 const showConfirm = ref(false);
 const showSuccess = ref(false);
 const showEdit = ref(false);
+const showCreate = ref(false);
+const creating = ref(false);
+
 
 const claseSeleccionada = ref(null);
 
@@ -176,21 +216,24 @@ const editForm = ref({
   estado: "Activa",
 });
 
-const BACKEND_BASE = "http://127.0.0.1:5002";
+const createForm = ref({
+  titulo: "",
+  descripcion: "",
+  precio: 0,
+  dia: "Lunes",
+});
 
-/* Abrir modal eliminar */
+/* ------------------ ELIMINAR ------------------ */
 function openConfirm(clase) {
   claseSeleccionada.value = clase;
   showConfirm.value = true;
 }
 
-/* Cerrar modal eliminar */
 function closeConfirm() {
   showConfirm.value = false;
   claseSeleccionada.value = null;
 }
 
-/* Eliminar clase */
 async function confirmarEliminacion() {
   if (!claseSeleccionada.value) return;
 
@@ -205,30 +248,26 @@ async function confirmarEliminacion() {
     showSuccess.value = true;
   } catch (err) {
     console.error("ERROR:", err);
-    showConfirm.value = false;
     alert("No se pudo eliminar la clase.");
   }
 }
 
-/* Cerrar modal éxito */
 function closeSuccess() {
   showSuccess.value = false;
 }
 
-/* ABRIR MODAL EDITAR */
+/* ------------------ EDITAR ------------------ */
 function abrirEditar(clase) {
   claseSeleccionada.value = clase;
   editForm.value = { ...clase };
   showEdit.value = true;
 }
 
-/* CERRAR MODAL EDITAR */
 function closeEdit() {
   showEdit.value = false;
   claseSeleccionada.value = null;
 }
 
-/* ACTUALIZAR CLASE */
 async function actualizarClase() {
   try {
     const id = claseSeleccionada.value.id_clase;
@@ -240,7 +279,6 @@ async function actualizarClase() {
       estado: editForm.value.estado,
     });
 
-    // Actualizar tabla local
     const index = clases.value.findIndex((c) => c.clase.id_clase === id);
 
     if (index !== -1) {
@@ -255,7 +293,54 @@ async function actualizarClase() {
   }
 }
 
-/* Cargar clases al entrar */
+/* ------------------ CREAR ------------------ */
+function abrirCrear() {
+  createForm.value = {
+    titulo: "",
+    descripcion: "",
+    precio: 0,
+    dia: "Lunes",
+  };
+  showCreate.value = true;
+}
+
+function closeCreate() {
+  showCreate.value = false;
+}
+
+async function crearClase() {
+  if (creating.value) return; 
+
+  creating.value = true; 
+
+  try {
+    const body = {
+      titulo: createForm.value.titulo,
+      descripcion: createForm.value.descripcion,
+      precio: createForm.value.precio,
+      dia: createForm.value.dia,
+      profesor_id: auth.id,
+      estado: "Activa",
+    };
+
+    const res = await axios.post(`${BACKEND_BASE}/clases`, body);
+
+    clases.value.push({
+      clase: res.data.clase,
+      horarios: [res.data.horario],
+    });
+
+    showCreate.value = false;
+    alert("Clase creada exitosamente.");
+  } catch (err) {
+    console.error("Error creando clase:", err);
+    alert("No se pudo crear la clase.");
+  } finally {
+    creating.value = false; 
+  }
+}
+
+/* ------------------ CARGAR CLASES ------------------ */
 onMounted(async () => {
   auth.token = localStorage.getItem("token");
   auth.id = Number(localStorage.getItem("id"));
@@ -270,7 +355,7 @@ onMounted(async () => {
   }
 });
 
-/* Formato moneda */
+/* ------------------ FORMATOS ------------------ */
 function formatCOP(value) {
   return new Intl.NumberFormat("es-CO", {
     style: "currency",
@@ -440,9 +525,6 @@ function formatCOP(value) {
 .tabla td {
   padding: 14px 16px;
   text-align: left;
-}
-.tabla tbody tr:hover {
-  background-color: #f1f5f9;
 }
 
 /* Estado */

@@ -5,20 +5,21 @@
     <div class="nav-links-group">
       <template v-if="!auth.token">
         <div class="guest-links">
-          <a href="#" class="nav-link">Clases</a>
-          <a href="#" class="nav-link">Docentes</a>
-          <a href="/We" class="nav-link">Acerca de Nosotros</a>
-          <a href="/login" class="nav-link">Acceder</a>        </div>
+          <a href="/clases" class="nav-link">Clases</a>
+          <a href="/we" class="nav-link">Acerca de Nosotros</a>
+          <a href="/login" class="nav-link">Acceder</a>
+        </div>
       </template>
 
       <template v-else>
         <!-- CLIENTE -->
         <template v-if="auth.rol.toLowerCase() === 'cliente'">
-          <a href="/clases" class="nav-link">Clases Solicitadas</a>
+          <a href="/clases" class="nav-link">Clases</a>
+          
+          <a href="/profesores" class="nav-link">Profesores</a>
+
           <a href="/pqrs" class="nav-link">PQRS</a>
           <a href="/mis-pqrs" class="nav-link">Mis PQR</a>
-          <a href="/We" class="nav-link">Acerca de Nosotros</a>
-          
         </template>
 
         <!-- DOCENTE -->
@@ -38,7 +39,6 @@
           <a href="/mis-pqrs" class="nav-link">Mis PQR</a>
           <a href="/Ayuda" class="nav-link">Soporte / Ayuda</a>
           <a href="/We" class="nav-link">Acerca de Nosotros</a>
-           
         </template>
 
         <!-- ADMIN -->
@@ -80,20 +80,41 @@
 
 <script setup>
 import { useAuthStore } from "../store/auth";
-import { useRouter } from "vue-router";
-import { ref } from "vue";
-const mostrarMenu = ref(false);
+import { useRouter, useRoute } from "vue-router";
+import { ref, watch } from "vue";
 
 const auth = useAuthStore();
 const router = useRouter();
+const route = useRoute();
+
+const mostrarMenu = ref(false);
+
+// Toggle del menú
 const toggleMenu = () => {
   mostrarMenu.value = !mostrarMenu.value;
 };
+
+// Cerrar sesión
 const cerrarSesion = () => {
   auth.logout();
-  router.push("/"); // vuelve al home tras cerrar sesión
+  mostrarMenu.value = false; // cerrar menú al salir
+  router.push("/");
 };
+
+//  Cerrar menú automáticamente al cambiar de ruta
+router.afterEach(() => {
+  mostrarMenu.value = false;
+});
+
+//  Cerrar menú cuando el usuario inicia sesión / logout
+watch(
+  () => auth.token,
+  () => {
+    mostrarMenu.value = false;
+  }
+);
 </script>
+
 
 <style scoped>
 .guest-links {
@@ -159,7 +180,7 @@ const cerrarSesion = () => {
   left: 0;
   width: 100%;
   height: 60px;
-  background-color: #07B3FA;
+  background-color: #07b3fa;
   color: white;
   display: flex;
   justify-content: space-between;

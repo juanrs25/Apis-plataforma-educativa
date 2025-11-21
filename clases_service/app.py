@@ -113,17 +113,30 @@ def eliminar_clase(id_clase):
     return jsonify({"mensaje": "Clase y su horario eliminados correctamente"}), 200
 
 
-#  LISTAR TODAS LAS CLASES
 @app.route('/clases', methods=['GET'])
 def listar_clases():
     clases = Clase.query.all()
     resultado = []
+
     for c in clases:
-        horarios = Horario.query.filter_by(id_clase=c.id_clase).all()
+        profesor_nombre = "Desconocido"
+
+        # Consultar API de usuarios
+        try:
+            resp = requests.get(f"http://localhost:5001/usuarios-public/{c.profesor_id}", timeout=2)
+            if resp.status_code == 200:
+                profesor_nombre = resp.json().get("Nombre_Completo", "Desconocido")
+        except:
+            pass
+
         resultado.append({
             "clase": c.to_dict(),
-            "horarios": [h.to_dict() for h in horarios]
+            "horarios": [h.to_dict() for h in c.horarios],
+            "profesor": {
+                "nombre": profesor_nombre
+            }
         })
+
     return jsonify(resultado), 200
 
 # INICIO DEL SERVICIO
