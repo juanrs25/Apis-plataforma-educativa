@@ -7,7 +7,7 @@ import bcrypt
 import jwt
 from datetime import datetime, timedelta
 from functools import wraps
-
+import os
 
 # CONFIGURACIÓN FLASK------------------
 app = Flask(__name__)
@@ -18,7 +18,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = SQLALCHEMY_TRACK_MODIFICATIONS
 db.init_app(app)
 
 # HELPERS---------------
-
+UPLOAD_FOLDER = './uploads'
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
 #Genera un JWT válido por 'horas' horas"
 def generar_token(usuario, horas=2):
     return jwt.encode({
@@ -41,6 +43,7 @@ def crear_usuario(data, rol_id, activo=True, estado='Aprobado'):
         activo=activo,
         estado_verificacion=estado,
         experiencia_laboral=data.get('experiencia_laboral'),
+        hoja_vida_path=data.get('hoja_vida_path'),
         titulo_profesional=data.get('titulo_profesional')
     )
 
@@ -82,7 +85,7 @@ def token_requerido(f):
 
         return f(usuario_actual, *args, **kwargs)
     return decorated
-
+#................................................................#
 # """Verifica que el usuario autenticado sea administrador"""
 def solo_admin(f):
     @wraps(f)
@@ -91,7 +94,6 @@ def solo_admin(f):
             return jsonify({'message': 'Solo administradores pueden realizar esta acción'}), 403
         return f(usuario, *args, **kwargs)
     return decorated
-
 
 # RUTAS PÚBLICAS---------------------------------------------------------------------------------
 
@@ -102,33 +104,58 @@ def index():
 # """Registro público para Cliente (activo) o Profesor (pendiente)"""--------------------------------
 @app.route('/registro', methods=['POST'])
 def registro_publico():
-    data = request.get_json()
+
+    # Datos normales del formulario
+    data = request.form.to_dict()
+
+    # Archivo PDF
+    archivo = request.files.get('hoja_vida_path')
+
+    # Rol
     rol_id = data.get('rol_id')
 
     try:
-        # Convertimos a entero (y manejamos el caso si no llega)
-        rol_id = int(data.get('rol_id', 0))
+        rol_id = int(rol_id)
     except (ValueError, TypeError):
         return jsonify({'message': 'Rol inválido'}), 400
 
-    print(f"✅ Rol procesado como entero: {rol_id} ({type(rol_id)})")
+    print(f"✅ Rol recibido: {rol_id}")
 
     if rol_id not in [2, 3]:
         return jsonify({'message': 'Rol inválido para registro público'}), 400
 
+    # Si es profesor (rol 3), debe subir PDF
+    if rol_id == 3:
+        if not archivo:
+            return jsonify({'message': 'Debe subir la hoja de vida'}), 400
+        
+        # Guardar archivo en uploads
+        filename = archivo.filename
+        archivo.save(os.path.join(UPLOAD_FOLDER, filename))
+        print("📄 Archivo guardado correctamente:", filename)
+
+        # Se guarda solo el nombre del archivo
+        data['hoja_vida_path'] = filename
+
+    # Crear usuario
     usuario = crear_usuario(
         data,
         rol_id=rol_id,
-        activo=(rol_id==2),
-        estado='Aprobado' if rol_id==2 else 'Pendiente'
+        activo=(rol_id == 2),
+        estado='Aprobado' if rol_id == 2 else 'Pendiente'
     )
     db.session.add(usuario)
     db.session.commit()
 
-    mensaje = 'Cliente registrado exitosamente' if rol_id==2 else 'Profesor registrado, pendiente de aprobación por admin'
+    mensaje = (
+        'Cliente registrado exitosamente'
+        if rol_id == 2
+        else 'Profesor registrado, pendiente de aprobación por admin'
+    )
+
     return jsonify({'message': mensaje}), 201
 
-@app.route('/login', methods=['POST'])
+
 # """Login de usuario, solo activos pueden iniciar sesión"""-----------------------------------------------------------------------------------
 @app.route('/login', methods=['POST'])
 def login():
@@ -140,8 +167,12 @@ def login():
 
     if not bcrypt.checkpw(data['Clave'].encode('utf-8'), usuario.Clave.encode('utf-8')):
         return jsonify({'message': 'Credenciales invalidas'}), 401
-
-    # Tiempo de expiración del token: 5 minutos
+     #Validar si es docente y aún no está aprobado
+    if usuario.rol_id == 3 and usuario.estado_verificacion.lower() != "aprobado":
+        return jsonify({
+            'message': 'Tu cuenta está pendiente de aprobación por el administrador.'
+        }), 403
+    # Tiempo de expiración del token: 60 minutos
     exp_time = datetime.utcnow() + timedelta(minutes=60)
 
     token = jwt.encode({
@@ -176,6 +207,56 @@ def usuario_public(id_usuario):
 
 
 # RUTAS ADMIN---------------------------------------------------------------------------------------
+#................................................................................................................#
+@app.route('/usuarios/todos', methods=['GET'])
+@token_requerido
+@solo_admin
+def obtener_todos(usuario):
+    usuarios = Usuario.query.all()
+
+    lista = []
+    for u in usuarios:
+        lista.append({
+            "id": u.id,
+            "nombre": u.Nombre_Completo,
+            "email": u.Usuario,
+            "rol": u.rol.nombre,
+            "estado": u.estado_verificacion,
+            "activo": u.activo,
+            "hoja_vida": u.hoja_vida_path
+        })
+
+    return jsonify(lista), 200
+#.......................Activar usuario...................................#
+@app.route('/usuarios/activar/<int:id_usuario>', methods=['PUT'])
+@token_requerido
+@solo_admin
+def activar_usuario(usuario, id_usuario):
+    u = Usuario.query.get(id_usuario)
+
+    if not u:
+        return jsonify({'message': 'Usuario no encontrado'}), 404
+
+    u.activo = True
+    u.estado_verificacion = "Aprobado"
+    db.session.commit()
+
+    return jsonify({'message': 'Usuario activado'}), 200
+#.........................Desactivar usuario..................................#
+@app.route('/usuarios/desactivar/<int:id_usuario>', methods=['PUT'])
+@token_requerido
+@solo_admin
+def desactivar_usuario(usuario, id_usuario):
+    u = Usuario.query.get(id_usuario)
+
+    if not u:
+        return jsonify({'message': 'Usuario no encontrado'}), 404
+
+    u.activo = False
+    db.session.commit()
+
+    return jsonify({'message': 'Usuario desactivado'}), 200
+#.....................................................................................#
 #OBTENER USUARIO POR ID
 @app.route('/usuarios/<int:id_usuario>', methods=['GET'])
 @token_requerido
@@ -193,7 +274,7 @@ def obtener_usuario(usuario, id_usuario):
         'rol': user.rol.nombre if user.rol else None,
         'activo': user.activo
     }), 200
-
+#................................................................................................................#
 #Funcion para listar todos los usuarios
 @app.route('/usuarios', methods=['GET'])
 @token_requerido
@@ -223,9 +304,10 @@ def get_usuarios(usuario):
         
     } for u in usuarios]), 200
 
-
+#................................................................................................................#
+#funcion para listar todos los docentes activos
 @app.route('/docentes', methods=['GET'])
-def listar_docentes():
+def listar_docentes(usuario):
     docentes = Usuario.query.join(Rol).filter(
         Rol.nombre == 'Docente',
         Usuario.activo == True
@@ -241,10 +323,43 @@ def listar_docentes():
             "titulo": d.titulo_profesional,
             "experiencia": d.experiencia_laboral
         } for d in docentes]
-    }), 200
+    }), 200     
+#................................................................................................................#
+#"Listar docentes pendientes de aprobación (solo Admin)"
+@app.route('/usuarios/pendientes', methods=['GET'])
+@token_requerido
+@solo_admin
+def docentes_pendientes(usuario):
+    docentes = Usuario.query.filter_by(rol_id=3, activo=False).all()
 
+    resultado = []
+    for d in docentes:
+        resultado.append({
+            "id": d.id,
+            "nombre": d.Nombre_Completo,
+            "email": d.Email,
+            "estado": d.estado_verificacion,
+            "hoja_vida_path": d.hoja_vida_path
+        })
+    
+    return jsonify(resultado), 200
+#................................................................................................................#
+#"Rechazar la aprobación de un Docente pendiente (solo Admin)"
+@app.route('/usuarios/rechazar/<int:id_usuario>', methods=['PUT'])
+@token_requerido
+@solo_admin
+def rechazar_profesor(usuario, id_usuario):
+    u = Usuario.query.get(id_usuario)
+    if not u: 
+        return jsonify({'message': 'Usuario no encontrado'}), 404
+    if u.rol.nombre != 'Docente': 
+        return jsonify({'message': 'Solo se pueden rechazar profesores'}), 400
 
-            
+    u.activo = False
+    u.estado_verificacion = 'Rechazado'
+    db.session.commit()
+
+    return jsonify({'message': f'Docente {u.Usuario} rechazado exitosamente'})
 #--------------------------------------------------------------------------------------------------------------------------
 # ACTUALIZAR USUARIO (solo Admin)
 @app.route('/usuarios/<int:id_usuario>', methods=['PUT'])
@@ -318,6 +433,11 @@ def crear_usuario_admin(usuario):
     db.session.add(usuario_nuevo)
     db.session.commit()
     return jsonify({'message': 'Usuario creado exitosamente'}), 201
+#..................................................................................................................#
+from flask import send_from_directory
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory('./uploads', filename)
 
 # RUTAS COMPARTIDAS-------------------------------------------------
 @app.route('/roles', methods=['GET'])

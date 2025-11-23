@@ -34,17 +34,9 @@
               <span class="estado-pendiente">{{ docente.estado }}</span>
             </td>
             <td>
-              <a
-                href="#"
-                class="link-cv"
-                style="
-                  text-decoration: underline;
-                  color: navy;
-                  font-weight: 600;
-                "
-              >
-                Ver Hoja de Vida
-              </a>
+             <a :href="`http://localhost:5001/uploads/${docente.hoja_vida_path}`" target="_blank">
+             Ver Hoja de Vida
+            </a>
             </td>
             <td class="acciones">
               <button class="btn-aprobar" @click="aprobarDocente(docente)">
@@ -71,39 +63,72 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import axios from "axios";
+import { ref, onMounted } from "vue";
+import { useAuthStore } from "../store/auth";
 
-// Datos simulados de ejemplo
-const docentesPendientes = ref([
-  {
-    nombre: "Laura Martínez",
-    email: "laura.martinez@example.com",
-    fechaRegistro: "2025-11-05",
-    estado: "Pendiente",
-  },
-  {
-    nombre: "Carlos López",
-    email: "carlos.lopez@example.com",
-    fechaRegistro: "2025-11-06",
-    estado: "Pendiente",
-  },
-  {
-    nombre: "María Torres",
-    email: "maria.torres@example.com",
-    fechaRegistro: "2025-11-07",
-    estado: "Pendiente",
-  },
-]);
+const auth = useAuthStore();
+const docentesPendientes = ref([]);
 
-// Funciones simuladas
-const aprobarDocente = (docente) => {
-  alert(`Docente ${docente.nombre} aprobado exitosamente.`);
+const cargarDocentes = async () => {
+  try {
+    const res = await axios.get("http://localhost:5001/usuarios/pendientes", {
+      headers: {
+        Authorization: `Bearer ${auth.token}`
+      }
+    });
+    docentesPendientes.value = res.data;
+  } catch (err) {
+    console.error("Error al cargar docentes:", err);
+  }
 };
 
-const rechazarDocente = (docente) => {
-  alert(` Docente ${docente.nombre} rechazado.`);
+onMounted(() => {
+  cargarDocentes();
+});
+
+const aprobarDocente = async (docente) => {
+  try {
+    const res = await axios.put(
+      `http://localhost:5001/usuarios/aprobar/${docente.id}`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${auth.token}`
+        }
+      }
+    );
+
+    alert(res.data.message);
+
+    // Recargar tabla
+    cargarDocentes();
+
+  } catch (err) {
+    alert(err.response?.data?.message || "Error al aprobar");
+  }
+};
+
+const rechazarDocente = async (docente) => {
+  try {
+    const res = await axios.put(
+      `http://localhost:5001/usuarios/rechazar/${docente.id}`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${auth.token}`
+        }
+      }
+    );
+
+    alert(res.data.message);
+    cargarDocentes();
+  } catch (err) {
+    alert(err.response?.data?.message || "Error al rechazar");
+  }
 };
 </script>
+
 
 <style scoped>
 @import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css");
