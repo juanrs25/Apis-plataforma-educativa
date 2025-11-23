@@ -6,7 +6,7 @@ app = Flask(__name__)
 
 # CONFIGURACIÓN BREVO
 
-
+BREVO_API_KEY = "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"
 
 BREVO_URL = "https://api.brevo.com/v3/smtp/email"
 
@@ -27,6 +27,14 @@ def enviar_correo(destinatario, asunto, html):
             "subject": asunto,
             "htmlContent": html
         }
+
+        headers = {
+            "accept": "application/json",
+            "api-key": BREVO_API_KEY,
+            "content-type": "application/json"
+        }
+
+
 
        
 
