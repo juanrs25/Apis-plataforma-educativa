@@ -55,7 +55,7 @@
             >Volver a mi panel</a
           >
 
-          <a href="/usuarios" class="nav-link">Usuarios</a>
+          <a href="/AdminUsuarios" class="nav-link">Usuarios</a>
           <a href="/PQRSC" class="nav-link">Reportes Clientes</a>
           <a href="/PQRSD" class="nav-link">Reportes Docentes</a>
         </template>

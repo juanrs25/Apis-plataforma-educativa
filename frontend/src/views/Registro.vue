@@ -89,7 +89,7 @@ const registrar = async () => {
   try {
     const formData = new FormData()
     Object.entries(form.value).forEach(([key, value]) => formData.append(key, value))
-    if (archivo.value) formData.append('Hoja_de_Vida', archivo.value)
+    if (archivo.value) formData.append('hoja_vida_path', archivo.value)
 
     const res = await axios.post('http://localhost:5001/registro', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
