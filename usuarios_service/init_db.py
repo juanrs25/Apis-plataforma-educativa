@@ -5,6 +5,6 @@ from db import db
 from models import *
 
 with app.app_context():
-    print("📦 Creando base de datos usuarios.db ...")
+    print("Creando base de datos usuarios.db ...")
     db.create_all()
-    print("✅ Base de datos creada correctamente.")
+    print(" Base de datos creada correctamente.")

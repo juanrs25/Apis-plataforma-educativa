@@ -7,7 +7,7 @@ import AdminPanel from "../views/AdminPanel.vue";
 import Profesores from "../views/Profesores.vue";
 import { useAuthStore } from "../store/auth";
 import Clases from "../views/Clases.vue";
-
+import AdminUsuarios from "../views/AdminUsuarios.vue";
 const routes = [
   { path: "/", redirect: "/home" },
   { path: "/home", component: Home },
@@ -19,6 +19,7 @@ const routes = [
   // Rutas protegidas
   { path: "/dashboard", component: Dashboard },
   { path: "/adminpanel", component: AdminPanel },
+  {path:"/AdminUsuarios", component: AdminUsuarios},
 ];
 
 const router = createRouter({
