@@ -120,6 +120,15 @@ async function cargarClases() {
 }
 
 function registrarse(idClase) {
+  const userId = localStorage.getItem("id");
+
+  // Si NO está logeado  enviarlo al registro
+  if (!userId) {
+    window.location.href = "/registro"; 
+    return;
+  }
+
+  // SI está logeado → abrir modal
   claseSeleccionada.value = idClase;
   claseSeleccionadaObj.value = clases.value.find(
     (c) => c.clase.id_clase === idClase

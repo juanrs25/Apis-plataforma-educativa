@@ -1,10 +1,14 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from config import Config
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from db import db
 from models import Inscripcion
 from datetime import datetime
 import requests
+from correos_service.correo import enviar_correo
 
 app = Flask(__name__)
 CORS(app)
@@ -17,9 +21,9 @@ cache_profesor_clases = {}
 
 
 
-# -----------------------------------------------------------
+
 #  1. CREAR SOLICITUD DE INSCRIPCIÓN
-# -----------------------------------------------------------
+
 @app.route('/inscripciones', methods=['POST'])
 def crear_inscripcion():
     data = request.get_json()
@@ -27,77 +31,80 @@ def crear_inscripcion():
     id_usuario = data.get("id_usuario")
     id_clase = data.get("id_clase")
 
-    if not id_usuario or not id_clase:
-        return jsonify({"error": "id_usuario e id_clase son obligatorios"}), 400
+    # 1. Validar inscripción existente
+    inscripcion = Inscripcion.query.filter_by(id_usuario=id_usuario, id_clase=id_clase).first()
+    if inscripcion:
+        return jsonify({
+            "error": "Ya existe una inscripción",
+            "estado_actual": inscripcion.estado
+        }), 400
 
-    #  Validar si ya existe inscripción previa
-    existente = Inscripcion.query.filter_by(
-        id_usuario=id_usuario,
-        id_clase=id_clase
-    ).first()
-
-    if existente:
-         if existente.estado == "Aprobada":
-          return jsonify({
-            "error": "Ya estás inscrito en esta clase",
-            "estado_actual": "Aprobada"
-        }), 409
-         
-         if existente.estado == "Pendiente":
-          return jsonify({
-            "error": "Ya enviaste una solicitud y está pendiente de aprobación",
-            "estado_actual": "Pendiente"
-        }), 409
-         
-         if existente.estado == "Rechazada":
-          return jsonify({
-            "error": "Tu solicitud fue rechazada. Consulta el correo del profesor.",
-            "estado_actual": "Rechazada"
-        }), 409
-    #  Validar usuario en API de usuarios
-    try:
-        resp_usr = requests.get(f"http://localhost:5001/usuarios-public/{id_usuario}")
-        if resp_usr.status_code != 200:
-            return jsonify({"error": "El usuario no existe"}), 404
-    except:
-        return jsonify({"error": "No se pudo conectar a usuarios"}), 500
-
-    # Validar clase en API de clases
-    try:
-        resp_cls = requests.get(f"http://localhost:5002/clases/{id_clase}")
-        if resp_cls.status_code != 200:
-            return jsonify({"error": "La clase no existe"}), 404
-    except:
-        return jsonify({"error": "No se pudo conectar al servicio de clases"}), 500
-
-    #  Crear la nueva inscripción
+    # 2. Crear inscripción nueva
     nueva = Inscripcion(
         id_usuario=id_usuario,
         id_clase=id_clase,
-        estado="Pendiente",
-        fecha_inscripcion=datetime.now()
+        estado="Pendiente"
     )
-
     db.session.add(nueva)
     db.session.commit()
 
+    # 3. Consultar usuario
+    try:
+        resp_user = requests.get(f"http://127.0.0.1:5001/usuarios-public/{id_usuario}")
+        user_data = resp_user.json()
+        nombre_cliente = user_data.get("Nombre_Completo")
+        email_cliente = user_data.get("Email")
+    except:
+        nombre_cliente = "Usuario"
+        email_cliente = None
+
+    # 4. Consultar clase
+    try:
+        resp_clase = requests.get(f"http://127.0.0.1:5002/clases/{id_clase}")
+        clase_data = resp_clase.json()
+        nombre_clase = clase_data.get("titulo")
+    except:
+        nombre_clase = "Clase desconocida"
+
+    # 5. Enviar correo llamando AL MICRO SERVICIO DE CORREOS
+    if email_cliente:
+        asunto = "Confirmación de inscripción"
+        html = f"""
+        <h2>Hola {nombre_cliente},</h2>
+        <p>Te has registrado correctamente a la clase: <strong>{nombre_clase}</strong>.</p>
+        <p>Tu solicitud está actualmente <strong>Pendiente</strong>.</p>
+        <p>El profesor revisará tu inscripción.</p>
+        <br>
+        <p>Gracias,<br>Equipo Educando</p>
+        """
+
+        try:
+            requests.post(
+                "http://127.0.0.1:5005/enviar-correo",
+                json={
+                    "destinatario": email_cliente,
+                    "asunto": asunto,
+                    "html": html
+                }
+            )
+        except Exception as e:
+            print("Error llamando al servicio de correos:", e)
+
     return jsonify({
-        "mensaje": "Solicitud enviada correctamente",
-        "inscripcion": nueva.to_dict()
+        "mensaje": "Inscripción creada y correo enviado",
+        "estado": "Pendiente"
     }), 201
 
 
 
-
-# -----------------------------------------------------------e
 #  2. OBTENER SOLICITUDES DE INSCRIPCIÓN DE UN PROFESOR
-# -----------------------------------------------------------
+
 @app.route('/inscripciones/profesor/<int:id_profesor>', methods=['GET'])
 def solicitudes_por_profesor(id_profesor):
 
-    # --------------------------------------------
+   
     # 1. Clases del profesor (cacheadas)
-    # --------------------------------------------
+   
     if id_profesor not in cache_profesor_clases:
         try:
             resp = requests.get(f"http://localhost:5002/clases/profesor/{id_profesor}", timeout=2)
@@ -109,9 +116,9 @@ def solicitudes_por_profesor(id_profesor):
 
     ids_clases = [c["clase"]["id_clase"] for c in clases_profesor]
 
-    # --------------------------------------------
+   
     # 2. Inscripciones de esas clases
-    # --------------------------------------------
+   
     solicitudes = Inscripcion.query.filter(
         Inscripcion.id_clase.in_(ids_clases)
     ).all()
@@ -120,9 +127,9 @@ def solicitudes_por_profesor(id_profesor):
 
     for s in solicitudes:
 
-        # --------------------------------------------
+    
         # 3. Usuario (cacheado)
-        # --------------------------------------------
+        
         if s.id_usuario not in cache_usuarios:
             try:
                 u = requests.get(f"http://localhost:5001/usuarios-public/{s.id_usuario}", timeout=2).json()
@@ -132,9 +139,9 @@ def solicitudes_por_profesor(id_profesor):
 
         usuario = cache_usuarios[s.id_usuario]
 
-        # --------------------------------------------
+      
         # 4. Clase (cacheada)
-        # --------------------------------------------
+   
         if s.id_clase not in cache_clases:
             try:
                 c = requests.get(f"http://localhost:5002/clases/{s.id_clase}", timeout=2).json()
@@ -144,9 +151,9 @@ def solicitudes_por_profesor(id_profesor):
 
         clase = cache_clases[s.id_clase]
 
-        # --------------------------------------------
+      
         # 5. Construcción final
-        # --------------------------------------------
+        
         resultado.append({
             "id_inscripcion": s.id_inscripcion,
             "estado": s.estado,
@@ -170,9 +177,9 @@ def solicitudes_por_profesor(id_profesor):
 
 
 
-# -----------------------------------------------------------
-# 🔵 3. ACEPTAR UNA INSCRIPCIÓN
-# -----------------------------------------------------------
+
+# 3. ACEPTAR UNA INSCRIPCIÓN
+
 @app.route('/inscripciones/<int:id_inscripcion>/aceptar', methods=['PUT'])
 def aceptar(id_inscripcion):
     ins = Inscripcion.query.get(id_inscripcion)
@@ -180,16 +187,69 @@ def aceptar(id_inscripcion):
     if not ins:
         return jsonify({"error": "Inscripción no encontrada"}), 404
 
+    # Cambiar estado
     ins.estado = "Aprobada"
     db.session.commit()
 
-    return jsonify({"mensaje": "Inscripción aprobada", "inscripcion": ins.to_dict()}), 200
+   
+    # 1. Obtener usuario
+  
+    try:
+        resp_user = requests.get(f"http://127.0.0.1:5001/usuarios-public/{ins.id_usuario}")
+        user_data = resp_user.json()
+        nombre_cliente = user_data.get("Nombre_Completo")
+        email_cliente = user_data.get("Email")
+    except:
+        nombre_cliente = "Usuario"
+        email_cliente = None
+
+  
+    # 2. Obtener datos de la clase
+ 
+    try:
+        resp_clase = requests.get(f"http://127.0.0.1:5002/clases/{ins.id_clase}")
+        clase_data = resp_clase.json()
+        nombre_clase = clase_data.get("titulo")
+
+        # Día de la clase
+        dia = clase_data.get("horarios")[0].get("dia") if clase_data.get("horarios") else "día asignado"
+    except:
+        nombre_clase = "Clase desconocida"
+        dia = "día asignado"
+
+    # ------------------------------------------------
+    # 3. ENVIAR CORREO DE ACEPTACIÓN
+    # ------------------------------------------------
+    if email_cliente:
+        asunto = "Tu inscripción ha sido aprobada"
+        html = f"""
+        <h2>Hola {nombre_cliente},</h2>
+        <p>Tu solicitud a la clase <strong>{nombre_clase}</strong> ha sido <strong>ACEPTADA</strong>.</p>
+        <p>Nos vemos en los horarios correspondientes.</p>
+        <br>
+        <p>Gracias por elegirnos.<br>Equipo Educando</p>
+        """
+
+        try:
+            requests.post(
+                "http://127.0.0.1:5005/enviar-correo",
+                json={
+                    "destinatario": email_cliente,
+                    "asunto": asunto,
+                    "html": html
+                }
+            )
+        except Exception as e:
+            print("Error enviando correo de aceptación:", e)
+
+    return jsonify({"mensaje": "Inscripción aprobada y correo enviado"}), 200
 
 
 
-# -----------------------------------------------------------
-# 🔵 4. RECHAZAR UNA INSCRIPCIÓN
-# -----------------------------------------------------------
+
+
+#  4. RECHAZAR UNA INSCRIPCIÓN (con envío de correo)
+
 @app.route('/inscripciones/<int:id_inscripcion>/rechazar', methods=['PUT'])
 def rechazar(id_inscripcion):
     ins = Inscripcion.query.get(id_inscripcion)
@@ -197,25 +257,81 @@ def rechazar(id_inscripcion):
     if not ins:
         return jsonify({"error": "Inscripción no encontrada"}), 404
 
+    # Cambiar estado
     ins.estado = "Rechazada"
     db.session.commit()
 
-    return jsonify({"mensaje": "Inscripción rechazada", "inscripcion": ins.to_dict()}), 200
+    
+    # 1. Obtener usuario
+    
+    try:
+        resp_user = requests.get(f"http://127.0.0.1:5001/usuarios-public/{ins.id_usuario}")
+        user_data = resp_user.json()
+        nombre_cliente = user_data.get("Nombre_Completo")
+        email_cliente = user_data.get("Email")
+    except:
+        nombre_cliente = "Usuario"
+        email_cliente = None
+
+  
+    # 2. Obtener datos del profesor
+  
+    try:
+        resp_clase = requests.get(f"http://127.0.0.1:5002/clases/{ins.id_clase}")
+        clase_data = resp_clase.json()
+
+        nombre_clase = clase_data.get("titulo")
+
+        # Datos del profesor
+        profesor = clase_data.get("profesor", {})
+        email_profesor = profesor.get("email", "No disponible")
+    except:
+        nombre_clase = "Clase desconocida"
+        email_profesor = "No disponible"
+
+
+    # 3. ENVIAR CORREO DE RECHAZO
+  
+    if email_cliente:
+        asunto = "Tu inscripción ha sido rechazada"
+        html = f"""
+        <h2>Hola {nombre_cliente},</h2>
+        <p>Tu solicitud a la clase <strong>{nombre_clase}</strong> ha sido <strong>RECHAZADA</strong>.</p>
+        <p>Por favor comunícate con el correo del docente expuesto en la plataforma para más información.</p>
+        <br>
+        <p>Atentamente,<br>
+        <strong>Equipo Educando</strong></p>
+        """
+
+        try:
+            requests.post(
+                "http://127.0.0.1:5005/enviar-correo",
+                json={
+                    "destinatario": email_cliente,
+                    "asunto": asunto,
+                    "html": html
+                }
+            )
+        except Exception as e:
+            print("Error enviando correo de rechazo:", e)
+
+    return jsonify({"mensaje": "Inscripción rechazada y correo enviado"}), 200
 
 
 
-# -----------------------------------------------------------
-# 🔵 5. OBTENER INSCRIPCIONES DE UN USUARIO
-# -----------------------------------------------------------
+
+
+#  5. OBTENER INSCRIPCIONES DE UN USUARIO
+
 @app.route('/inscripciones/usuario/<int:id_usuario>', methods=['GET'])
 def inscripciones_usuario(id_usuario):
     solicitudes = Inscripcion.query.filter_by(id_usuario=id_usuario).all()
     return jsonify([s.to_dict() for s in solicitudes]), 200
 
 
-# -----------------------------------------------------------
-# 🔵 INICIO DEL SERVICIO
-# -----------------------------------------------------------
+
+#  INICIO DEL SERVICIO
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()

@@ -44,7 +44,7 @@ def crear_usuario(data, rol_id, activo=True, estado='Aprobado'):
         titulo_profesional=data.get('titulo_profesional')
     )
 
-# DECORADORES----------------------------------------
+
 
  #Verifica que exista un token JWT válido y que el usuario esté activo"""
 def token_requerido(f):
@@ -99,7 +99,7 @@ def solo_admin(f):
 def index():
     return jsonify({"message": "API Usuarios corriendo con MySQL"})
 
-# """Registro público para Cliente (activo) o Profesor (pendiente)"""--------------------------------
+# """Registro público para Cliente (activo) o Profesor (pendiente)
 @app.route('/registro', methods=['POST'])
 def registro_publico():
     data = request.get_json()
