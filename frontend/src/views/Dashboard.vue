@@ -176,15 +176,68 @@
     </table>
 
     <!-- SECCIÓN SOLICITUDES -->
-    <div class="solicitudes">
-      <div class="solicitudes-header">
-        <i class="fas fa-users"></i>
-        <h2>Nuevas Solicitudes</h2>
+    <div class="solicitudes-container">
+      <div class="header" style="margin-top: 50px">
+        <div class="title">
+          <i class="fas fa-user-check"></i>
+          <h2>Solicitudes de inscripción</h2>
+        </div>
       </div>
 
-      <div class="solicitudes-content">
-        <p>No hay solicitudes pendientes.</p>
-      </div>
+      <table class="tabla">
+        <thead>
+          <tr>
+            <th>Cliente</th>
+            <th>Clase</th>
+            <th>Fecha solicitud</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr v-for="s in solicitudes" :key="s.id_inscripcion">
+            <td>{{ s.usuario.nombre }}</td>
+ 
+            <td>{{ s.clase.nombre_clase }}</td>
+
+            <td>{{ s.fecha_inscripcion }}</td>
+
+            <td>
+              <span
+                :class="{
+                  estadoPendiente: s.estado === 'Pendiente',
+                  estadoAprobada: s.estado === 'Aprobada',
+                  estadoRechazada: s.estado === 'Rechazada',
+                }"
+              >
+                {{ s.estado }}
+              </span>
+            </td>
+
+            <td class="acciones">
+              <button
+                v-if="s.estado === 'Pendiente'"
+                class="btn-editar"
+                style="background: #16a34a"
+                @click="aceptarSolicitud(s.id_inscripcion)"
+              >
+                <i class="fas fa-check"></i>
+              </button>
+
+              <button
+                v-if="s.estado === 'Pendiente'"
+                class="btn-eliminar"
+                @click="rechazarSolicitud(s.id_inscripcion)"
+              >
+                <i class="fas fa-times"></i>
+              </button>
+
+              <span v-if="s.estado !== 'Pendiente'">—</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </template>
@@ -197,7 +250,51 @@ import { useAuthStore } from "../store/auth";
 const auth = useAuthStore();
 const clases = ref([]);
 
-const BACKEND_BASE = "http://127.0.0.1:5002";
+const BACKEND_BASE = "http://127.0.0.1:5002"; // API clases
+const BACKEND_INSCRIPCIONES = "http://127.0.0.1:5004"; // API inscripciones
+
+/* ------------------ SOLICITUDES ------------------ */
+const solicitudes = ref([]);
+
+/* Cargar solicitudes del profesor */
+async function cargarSolicitudes() {
+  try {
+    const res = await axios.get(
+      `${BACKEND_INSCRIPCIONES}/inscripciones/profesor/${auth.id}`
+    );
+
+    solicitudes.value = res.data;
+  } catch (err) {
+    console.error("ERROR cargando solicitudes:", err);
+  }
+}
+
+/* ACEPTAR solicitud */
+async function aceptarSolicitud(id) {
+  try {
+    await axios.put(`${BACKEND_INSCRIPCIONES}/inscripciones/${id}/aceptar`);
+
+
+    solicitudes.value = solicitudes.value.map((s) =>
+      s.id_inscripcion === id ? { ...s, estado: "Aprobada" } : s
+    );
+  } catch (err) {
+    console.error("ERROR al aprobar:", err);
+  }
+}
+
+/* RECHAZAR solicitud */
+async function rechazarSolicitud(id) {
+  try {
+    await axios.put(`${BACKEND_INSCRIPCIONES}/inscripciones/${id}/rechazar`);
+
+    solicitudes.value = solicitudes.value.map((s) =>
+      s.id_inscripcion === id ? { ...s, estado: "Rechazada" } : s
+    );
+  } catch (err) {
+    console.error("ERROR al rechazar:", err);
+  }
+}
 
 /* ------------------ MODALES ------------------ */
 const showConfirm = ref(false);
@@ -205,7 +302,6 @@ const showSuccess = ref(false);
 const showEdit = ref(false);
 const showCreate = ref(false);
 const creating = ref(false);
-
 
 const claseSeleccionada = ref(null);
 
@@ -309,9 +405,9 @@ function closeCreate() {
 }
 
 async function crearClase() {
-  if (creating.value) return; 
+  if (creating.value) return;
 
-  creating.value = true; 
+  creating.value = true;
 
   try {
     const body = {
@@ -336,11 +432,11 @@ async function crearClase() {
     console.error("Error creando clase:", err);
     alert("No se pudo crear la clase.");
   } finally {
-    creating.value = false; 
+    creating.value = false;
   }
 }
 
-/* ------------------ CARGAR CLASES ------------------ */
+/* ------------------ CARGAR CLASES Y SOLICITUDES ------------------ */
 onMounted(async () => {
   auth.token = localStorage.getItem("token");
   auth.id = Number(localStorage.getItem("id"));
@@ -353,6 +449,8 @@ onMounted(async () => {
   } catch (err) {
     console.error("Error cargando clases:", err);
   }
+
+  await cargarSolicitudes();
 });
 
 /* ------------------ FORMATOS ------------------ */
@@ -600,4 +698,34 @@ function formatCOP(value) {
 .fade-leave-to {
   opacity: 0;
 }
+
+
+/* Estados de solicitud */
+.estadoPendiente {
+  background-color: #facc15;
+  color: #000;
+  padding: 4px 10px;
+  border-radius: 15px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.estadoAprobada {
+  background-color: #16a34a;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 15px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.estadoRechazada {
+  background-color: #dc2626;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 15px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 </style>

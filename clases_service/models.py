@@ -42,3 +42,4 @@ class Horario(db.Model):
             "id_clase": self.id_clase,
             "dia": self.dia,
         }
+

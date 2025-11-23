@@ -117,7 +117,7 @@ const cursos = ref([
   text-align: center;
 }
 
-/* 🎠 CARRUSEL */
+/*  CARRUSEL */
 .carousel-section {
   width: 100%;
   position: relative;
