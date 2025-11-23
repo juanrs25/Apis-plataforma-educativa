@@ -171,7 +171,10 @@ def usuario_public(id_usuario):
         'id': user.id,
         #'activo': user.activo,
         'rol': user.rol.nombre if user.rol else None,
-        'Nombre_Completo': user.Nombre_Completo
+        'Nombre_Completo': user.Nombre_Completo,
+        'Email': user.Email,
+
+        
     }), 200
 
 

@@ -18,7 +18,7 @@ db.init_app(app)
 
 #   CACHE DE PROFESORES
 
-cache_profesores = {}   # id → nombre
+cache_profesores = {}  
 
 
 
@@ -84,31 +84,46 @@ def listar_clases():
 
     # Llenar caché si faltan profesores
     for pid in profesor_ids:
-        if pid in cache_profesores:
-            continue
+        if pid not in cache_profesores:  # SOLO consultar si no está en caché
+            try:
+                resp = requests.get(f"http://localhost:5001/usuarios-public/{pid}", timeout=1)
 
-        # Llamada a la API SOLO si no está en caché
-        try:
-            resp = requests.get(f"http://localhost:5001/usuarios-public/{pid}", timeout=1)
-            if resp.status_code == 200:
-                data = resp.json()
-                cache_profesores[pid] = data.get("Nombre_Completo", "Desconocido")
-            else:
-                cache_profesores[pid] = "Desconocido"
-        except:
-            cache_profesores[pid] = "Desconocido"
+                if resp.status_code == 200:
+                    data = resp.json()
 
-    # Armar respuesta
+                    cache_profesores[pid] = {
+                        "nombre": data.get("Nombre_Completo", "Desconocido"),
+                        "email": data.get("Email", "No disponible")
+                    }
+                else:
+                    cache_profesores[pid] = {
+                        "nombre": "Desconocido",
+                        "email": "No disponible"
+                    }
+
+            except:
+                cache_profesores[pid] = {
+                    "nombre": "Desconocido",
+                    "email": "No disponible"
+                }
+
+    # Armar respuesta final
     for c in clases:
+        profesor_info = cache_profesores.get(c.profesor_id, {
+            "nombre": "Desconocido",
+            "email": "No disponible"
+        })
+
         resultado.append({
             "clase": c.to_dict(),
             "horarios": [h.to_dict() for h in c.horarios],
-            "profesor": {
-                "nombre": cache_profesores.get(c.profesor_id, "Desconocido")
-            }
+            "profesor": profesor_info
         })
 
     return jsonify(resultado), 200
+
+
+
 
 
 
@@ -127,6 +142,15 @@ def obtener_clases_de_profesor(profesor_id):
         })
 
     return jsonify(resultado), 200
+
+
+@app.route('/clases/<int:id_clase>', methods=['GET'])
+def obtener_clase(id_clase):
+    clase = Clase.query.get(id_clase)
+    if not clase:
+        return jsonify({"error": "Clase no encontrada"}), 404
+
+    return jsonify(clase.to_dict()), 200
 
 
 
